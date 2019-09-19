@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import "package:stomp/stomp.dart";
+import "package:stomp/vm.dart" show connect;
 
 void main() => runApp(MyApp());
 
@@ -13,7 +15,7 @@ class MyApp extends StatelessWidget {
       title: title,
       home: MyHomePage(
         title: title,
-        channel: IOWebSocketChannel.connect('ws://192.168.0.139:8080/pocketChat'),
+        channel: IOWebSocketChannel.connect('ws://localhost:8080/gs-guide-websocket'),
       ),
     );
   }
@@ -31,6 +33,21 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   TextEditingController _controller = TextEditingController();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+//    connect("/gs-guide-websocket", host: "192.168.88.157", port: 8080).then((StompClient client) {
+//      client.subscribeString("uniqueId", "/topic/greetings",
+//              (Map<String, String> headers, String message) {
+//            print("Recieve $message");
+//          });
+//
+//      print("Sending message Test...");
+//      client.sendString("/topic/greetings", "Hi, Stomp");
+//    });
+  }
 
   @override
   Widget build(BuildContext context) {
