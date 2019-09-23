@@ -1,9 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import "package:stomp/stomp.dart";
-import "package:stomp/vm.dart" show connect;
 
 void main() => runApp(MyApp());
 
@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
       title: title,
       home: MyHomePage(
         title: title,
-        channel: IOWebSocketChannel.connect('ws://localhost:8080/gs-guide-websocket'),
+        channel: IOWebSocketChannel.connect('ws://192.168.88.159:8080/socket'),
       ),
     );
   }
@@ -25,7 +25,8 @@ class MyHomePage extends StatefulWidget {
   final String title;
   final WebSocketChannel channel;
 
-  MyHomePage({Key key, @required this.title, @required this.channel}) : super(key: key);
+  MyHomePage({Key key, @required this.title, @required this.channel})
+      : super(key: key);
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -35,26 +36,17 @@ class _MyHomePageState extends State<MyHomePage> {
   TextEditingController _controller = TextEditingController();
 
   @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-//    connect("/gs-guide-websocket", host: "192.168.88.157", port: 8080).then((StompClient client) {
-//      client.subscribeString("uniqueId", "/topic/greetings",
-//              (Map<String, String> headers, String message) {
-//            print("Recieve $message");
-//          });
-//
-//      print("Sending message Test...");
-//      client.sendString("/topic/greetings", "Hi, Stomp");
-//    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-//    widget.channel.stream.listen((message) {
-//      print("Message Listener activated.");
-//      print("message: " + message.toString());
-//    });
+    Stream<dynamic> stream = widget.channel.stream.asBroadcastStream();
+    stream.listen((onData) {
+      print("onData listener is working.");
+      print("onData: " + onData.toString());
+    }, onError: (onError) {
+      print("onError listener is working.");
+      print("onError: " + onError.toString());
+    }, onDone: () {
+      print("onDone listener is working.");
+    }, cancelOnError: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -72,9 +64,9 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             StreamBuilder(
-              stream: widget.channel.stream,
+              stream: stream,
               builder: (context, snapshot) {
-                if(snapshot.hasData) {
+                if (snapshot.hasData) {
                   print("if(snapshot.hasData)");
                   print("snapshot.data: " + snapshot.data.toString());
                 } else {
