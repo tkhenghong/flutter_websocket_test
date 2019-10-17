@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:http/http.dart' as http;
 
 void main() => runApp(MyApp());
 
@@ -15,7 +18,7 @@ class MyApp extends StatelessWidget {
       title: title,
       home: MyHomePage(
         title: title,
-        channel: IOWebSocketChannel.connect('ws://35.184.11.203:8080/socket'),
+        channel: IOWebSocketChannel.connect('ws://192.168.88.165:8080/topic/public'),
       ),
     );
   }
@@ -92,6 +95,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _sendMessage() {
     print("Send Message");
     if (_controller.text.isNotEmpty) {
+      addConversationGroup(_controller.text);
       widget.channel.sink.add(_controller.text);
     }
   }
@@ -100,5 +104,35 @@ class _MyHomePageState extends State<MyHomePage> {
   void dispose() {
     widget.channel.sink.close();
     super.dispose();
+  }
+
+  addConversationGroup(String message) async {
+    String wholeURL = "http://192.168.88.165:8080" + "/chat.sendMessage";
+    var httpResponse = await http.post(wholeURL, body: message, headers: createAcceptJSONHeader());
+
+    print("HTTP RESPONSE");
+    if (httpResponseIsCreated(httpResponse)) {
+//      String locationString = httpResponse.headers['location'];
+
+      print("Run here?");
+    }
+    return null;
+  }
+
+  Map<String, String> createAcceptJSONHeader() {
+    Map<String, String> headers = new HashMap();
+    headers['Content-Type'] = "application/json";
+//    headers['Connection'] = "Upgrade";
+//    headers['Upgrade'] = "WebSocket";
+    return headers;
+  }
+
+  bool httpResponseIsCreated(Response httpResponse) {
+    if (httpResponse.statusCode == 201) {
+      return true;
+    } else {
+      print("Request failed with status: ${httpResponse.statusCode}.");
+      return false;
+    }
   }
 }
