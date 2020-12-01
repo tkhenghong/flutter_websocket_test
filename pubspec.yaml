@@ -14,13 +14,14 @@ description: Flutter app for testing WebSocket Connection.
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.1.0 <3.0.0"
+  sdk: ">=2.7.0 <3.0.0"
 
 dependencies:
-  web_socket_channel: ^1.0.15
+  web_socket_channel: ^1.1.0
   http: ^0.12.0+2
-  stomp: ^0.8.0
-  alice: ^0.0.16
+
+  # WebSocket/STOMP client
+  stomp_dart_client: ^0.3.7
 
   socket_flutter_plugin: ^0.0.1
   flutter:
