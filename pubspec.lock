@@ -128,13 +128,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.99"
-  socket_flutter_plugin:
-    dependency: "direct main"
-    description:
-      name: socket_flutter_plugin
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.0.1"
   source_span:
     dependency: transitive
     description:
@@ -155,7 +148,7 @@ packages:
       name: stomp_dart_client
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.3.7"
+    version: "0.3.8"
   stream_channel:
     dependency: transitive
     description:

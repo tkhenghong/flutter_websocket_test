@@ -21,9 +21,8 @@ dependencies:
   http: ^0.12.0+2
 
   # WebSocket/STOMP client
-  stomp_dart_client: ^0.3.7
+  stomp_dart_client: ^0.3.8
 
-  socket_flutter_plugin: ^0.0.1
   flutter:
     sdk: flutter
 
