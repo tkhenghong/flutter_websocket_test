@@ -16,6 +16,7 @@ import 'package:http/http.dart' as http;
 
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   ByteData byteData = await rootBundle.load('lib/keystore/vmerchant_development.cer');
   HttpOverrides.global = new CustomHttpOverrides(byteData);
   runApp(MyApp());
@@ -27,12 +28,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = 'WebSocket Demo';
     Map<String, String> headers = new HashMap();
-    headers.putIfAbsent('Authorization', () => 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiI4ZDY0ZmFhNC00ZmJlLTQ0NzctYmJmMy04ZTIxODYwZmJkYjciLCJzdWIiOiItIiwiUF9MSUQiOiJQMTlIbE55UnU5OGF2SzVLcnBTVUl3PT1LOEVpdjgrNWJFNEI0Y3Vka1MxeDkvSlFieEI5RGI3YXFnSFlqWGVaYVJBPSIsIlBfVUlEIjoiZUw0bFN6MWtUV1BBS245OE9OOXc5UT09eFczdGdTYTc5ZzlXeUVaYitsVHZMeGgzZytwcllTNy90c1RvVmNlYkxJcz0iLCJpYXQiOjE2MDY4MDc2MTIsImV4cCI6MTYwNjg0MzYxMn0.F5z2OAA0x_MFsweKtQH8CBjtyG0W1mMGPZnWEjLb_6riCUVOedHGd5q-6QAHfu3392pUr4Jnaye8TbZZEIk3NQ');
+    headers.putIfAbsent('Authorization', () => 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkMDIyZWE4Ni00YjUyLTRhZjgtYTJlYi1jNzIwMTRjZDliYzkiLCJzdWIiOiItIiwiUF9MSUQiOiJHdHVFZkJ1NXJ4VGM0ZnhDaW9MVnhBPT15TWZFdkZnQ3dxc08wODV6TFQ2dWVRPT0iLCJQX1VJRCI6IjBSMFdnN0xlTmhIaTFjRmJ1OHY1Z3c9PUJrQUp6RzVoUUgveHRlNTNhakUwcTBrRUNOdFp2U2lxSnZSUkM4MWJ3dFk9IiwiaWF0IjoxNjA2ODkzMjE5LCJleHAiOjE2MDY5MjkyMTl9.TUxqvv_RNW0ggJvkjOmQgBtLyecL_syeZlPCuW2rz1quj7_7UexDUPijUGziXj91hMlkiiKfQvm-ovavSe3sGA');
     return MaterialApp(
       title: title,
       home: MyHomePage(
-        title: title, // 'ws://192.168.0.139:8080/gs-guide-websocket'
-        channel: IOWebSocketChannel.connect("wss://vmerchant.neurogine.com/rest/secured/socket", headers: headers),
+        title: title,
+        // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
+        // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
+        channel: IOWebSocketChannel.connect("wss://vmerchant.neurogine.com/rest/secured/socket/websocket", headers: headers),
       ),
     );
   }
@@ -60,11 +63,11 @@ class _MyHomePageState extends State<MyHomePage> {
   testWebsocketPlugin() async {
     print("testWebsocketPlugin()");
     Map<String, String> headers = new HashMap();
-    headers.putIfAbsent('Authorization', () => 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiI4ZDY0ZmFhNC00ZmJlLTQ0NzctYmJmMy04ZTIxODYwZmJkYjciLCJzdWIiOiItIiwiUF9MSUQiOiJQMTlIbE55UnU5OGF2SzVLcnBTVUl3PT1LOEVpdjgrNWJFNEI0Y3Vka1MxeDkvSlFieEI5RGI3YXFnSFlqWGVaYVJBPSIsIlBfVUlEIjoiZUw0bFN6MWtUV1BBS245OE9OOXc5UT09eFczdGdTYTc5ZzlXeUVaYitsVHZMeGgzZytwcllTNy90c1RvVmNlYkxJcz0iLCJpYXQiOjE2MDY4MDc2MTIsImV4cCI6MTYwNjg0MzYxMn0.F5z2OAA0x_MFsweKtQH8CBjtyG0W1mMGPZnWEjLb_6riCUVOedHGd5q-6QAHfu3392pUr4Jnaye8TbZZEIk3NQ');
+    headers.putIfAbsent('Authorization', () => 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkMDIyZWE4Ni00YjUyLTRhZjgtYTJlYi1jNzIwMTRjZDliYzkiLCJzdWIiOiItIiwiUF9MSUQiOiJHdHVFZkJ1NXJ4VGM0ZnhDaW9MVnhBPT15TWZFdkZnQ3dxc08wODV6TFQ2dWVRPT0iLCJQX1VJRCI6IjBSMFdnN0xlTmhIaTFjRmJ1OHY1Z3c9PUJrQUp6RzVoUUgveHRlNTNhakUwcTBrRUNOdFp2U2lxSnZSUkM4MWJ3dFk9IiwiaWF0IjoxNjA2ODkzMjE5LCJleHAiOjE2MDY5MjkyMTl9.TUxqvv_RNW0ggJvkjOmQgBtLyecL_syeZlPCuW2rz1quj7_7UexDUPijUGziXj91hMlkiiKfQvm-ovavSe3sGA');
     try {
-      // print('websocket.service.dart connectWebSocketTest() userId: $userId');
-      String webSocketUrl = 'https://vmerchant.neurogine.com/rest/secured/socket';
-      // String webSocketUrl = 'wss://echo.websocket.org';
+      // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
+      // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
+      String webSocketUrl = 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket';
 
       StompClient stompClient = StompClient(
           config: StompConfig(
