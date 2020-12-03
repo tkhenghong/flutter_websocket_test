@@ -3,17 +3,16 @@ import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_websocket_test/http_overrides/custom_http_overrides.dart';
 import 'package:http/http.dart';
+import 'package:http/http.dart' as http;
 import 'package:stomp_dart_client/stomp.dart';
 import 'package:stomp_dart_client/stomp_config.dart';
 import 'package:stomp_dart_client/stomp_frame.dart';
 import 'package:web_socket_channel/io.dart';
-import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:http/http.dart' as http;
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,19 +22,13 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-
   @override
   Widget build(BuildContext context) {
     final title = 'WebSocket Demo';
-    Map<String, String> headers = new HashMap();
-    headers.putIfAbsent('Authorization', () => 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkMDIyZWE4Ni00YjUyLTRhZjgtYTJlYi1jNzIwMTRjZDliYzkiLCJzdWIiOiItIiwiUF9MSUQiOiJHdHVFZkJ1NXJ4VGM0ZnhDaW9MVnhBPT15TWZFdkZnQ3dxc08wODV6TFQ2dWVRPT0iLCJQX1VJRCI6IjBSMFdnN0xlTmhIaTFjRmJ1OHY1Z3c9PUJrQUp6RzVoUUgveHRlNTNhakUwcTBrRUNOdFp2U2lxSnZSUkM4MWJ3dFk9IiwiaWF0IjoxNjA2ODkzMjE5LCJleHAiOjE2MDY5MjkyMTl9.TUxqvv_RNW0ggJvkjOmQgBtLyecL_syeZlPCuW2rz1quj7_7UexDUPijUGziXj91hMlkiiKfQvm-ovavSe3sGA');
     return MaterialApp(
       title: title,
       home: MyHomePage(
         title: title,
-        // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
-        // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
-        channel: IOWebSocketChannel.connect("wss://vmerchant.neurogine.com/rest/secured/socket/websocket", headers: headers),
       ),
     );
   }
@@ -43,78 +36,97 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   final String title;
-  final WebSocketChannel channel;
 
-  MyHomePage({Key key, @required this.title, @required this.channel}) : super(key: key);
+  MyHomePage({Key key, @required this.title}) : super(key: key);
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  Map<String, String> headers = new HashMap();
+
+  // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
+  // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
+  String url = 'ws://192.168.88.156:8080/ws/websocket';
+
   TextEditingController _controller = TextEditingController();
-//  SocketFlutterPlugin myIO;
+  WebSocketChannel webSocketChannel;
+  Stream<dynamic> webSocketStream;
 
   @override
   void initState() {
+    headers.putIfAbsent(
+        'Authorization',
+        () =>
+            'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkMDIyZWE4Ni00YjUyLTRhZjgtYTJlYi1jNzIwMTRjZDliYzkiLCJzdWIiOiItIiwiUF9MSUQiOiJHdHVFZkJ1NXJ4VGM0ZnhDaW9MVnhBPT15TWZFdkZnQ3dxc08wODV6TFQ2dWVRPT0iLCJQX1VJRCI6IjBSMFdnN0xlTmhIaTFjRmJ1OHY1Z3c9PUJrQUp6RzVoUUgveHRlNTNhakUwcTBrRUNOdFp2U2lxSnZSUkM4MWJ3dFk9IiwiaWF0IjoxNjA2ODkzMjE5LCJleHAiOjE2MDY5MjkyMTl9.TUxqvv_RNW0ggJvkjOmQgBtLyecL_syeZlPCuW2rz1quj7_7UexDUPijUGziXj91hMlkiiKfQvm-ovavSe3sGA');
+    webSocketChannel = IOWebSocketChannel.connect(url, headers: headers);
     super.initState();
   }
 
-  testWebsocketPlugin() async {
-    print("testWebsocketPlugin()");
-    Map<String, String> headers = new HashMap();
-    headers.putIfAbsent('Authorization', () => 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkMDIyZWE4Ni00YjUyLTRhZjgtYTJlYi1jNzIwMTRjZDliYzkiLCJzdWIiOiItIiwiUF9MSUQiOiJHdHVFZkJ1NXJ4VGM0ZnhDaW9MVnhBPT15TWZFdkZnQ3dxc08wODV6TFQ2dWVRPT0iLCJQX1VJRCI6IjBSMFdnN0xlTmhIaTFjRmJ1OHY1Z3c9PUJrQUp6RzVoUUgveHRlNTNhakUwcTBrRUNOdFp2U2lxSnZSUkM4MWJ3dFk9IiwiaWF0IjoxNjA2ODkzMjE5LCJleHAiOjE2MDY5MjkyMTl9.TUxqvv_RNW0ggJvkjOmQgBtLyecL_syeZlPCuW2rz1quj7_7UexDUPijUGziXj91hMlkiiKfQvm-ovavSe3sGA');
+  testStompClientPlugin() async {
+    print("testStompClientPlugin()");
     try {
-      // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
-      // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
-      String webSocketUrl = 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket';
-
       StompClient stompClient = StompClient(
           config: StompConfig(
               useSockJS: true,
               reconnectDelay: 3000,
               connectionTimeout: Duration(seconds: 5),
-              url: webSocketUrl,
+              url: url,
               onConnect: (StompClient client, StompFrame frame) {
-                print('websocket.service.dart onConnect()');
+                print('main.dart onConnect()');
                 // onConnect(userId, client, frame);
               },
               onWebSocketError: (dynamic error) {
-                print('websocket.service.dart onWebSocketError:');
-                print('websocket.service.dart error: $error');
+                print('main.dart onWebSocketError:');
+                print('main.dart error: $error');
                 print(error.toString());
               },
               onStompError: (dynamic error) {
-                print('websocket.service.dart onStompError:');
-                print('websocket.service.dart error: $error');
+                print('main.dart onStompError:');
+                print('main.dart error: $error');
               },
               onDebugMessage: (String debugMessage) {
-                print('websocket.service.dart onDebugMessage:');
-                print('websocket.service.dart debugMessage: $debugMessage');
+                print('main.dart onDebugMessage:');
+                print('main.dart debugMessage: $debugMessage');
               },
               stompConnectHeaders: headers,
               webSocketConnectHeaders: headers));
       stompClient.activate();
-      print('websocket.service.dart CHECKPOINT 1');
+      print('main.dart CHECKPOINT 1');
     } catch (e) {
-      print('websocket.service.dart connect to websocket failed.');
+      print('main.dart connect to websocket failed.');
+    }
+  }
+
+  testOfficialWebSocket() async {
+    print('');
+    webSocketStream = webSocketChannel.stream.asBroadcastStream();
+    webSocketStream.listen((onData) {
+      print("main.dart onData: $onData");
+    }, onError: (onError) {
+      print("main.dart onError: $onError");
+    }, onDone: () {
+      print("main.dart onDone.");
+    }, cancelOnError: false);
+  }
+
+  void _sendMessage() async {
+    print('_sendMessage()');
+    if (_controller.text != null && _controller.text != '') {
+      String wholeURL = "http://192.168.0.139:8080" + "/testingWEbsocket";
+      Response httpResponse = await http.post(wholeURL, body: _controller.text, headers: headers);
+
+      if (httpResponseIsCreated(httpResponse)) {
+        print('main.dart httpResponse.body: ${httpResponse.body}');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-//    testNewWebsocketPlugin();
-    testWebsocketPlugin();
-    Stream<dynamic> stream = widget.channel.stream.asBroadcastStream();
-    stream.listen((onData) {
-      print("onData listener is working.");
-      print("onData: " + onData.toString());
-    }, onError: (onError) {
-      print("onError listener is working.");
-      print("onError: " + onError.toString());
-    }, onDone: () {
-      print("onDone listener is working.");
-    }, cancelOnError: false);
+    testStompClientPlugin();
+    testOfficialWebSocket();
 
     return MaterialApp(
       home: Scaffold(
@@ -133,7 +145,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
               StreamBuilder(
-                stream: stream,
+                stream: webSocketStream,
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
                     print("if(snapshot.hasData)");
@@ -165,40 +177,10 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _sendMessage() {
-    print("Send Message");
-    if (_controller.text != null && _controller.text != '') {
-      sendMessageToREST(_controller.text);
-      // widget.channel.sink.add(_controller.text);
-      // this.client.sendString("/app/hello", _controller.text);
-    }
-  }
-
   @override
   void dispose() {
-    widget.channel.sink.close();
+    webSocketChannel.sink.close();
     super.dispose();
-  }
-
-  sendMessageToREST(String message) async {
-    String wholeURL = "http://192.168.0.139:8080" + "/testingWEbsocket";
-    var httpResponse = await http.post(wholeURL, body: message, headers: createAcceptJSONHeader());
-
-    print("HTTP RESPONSE");
-    if (httpResponseIsCreated(httpResponse)) {
-//      String locationString = httpResponse.headers['location'];
-
-      print("Run here?");
-    }
-    return null;
-  }
-
-  Map<String, String> createAcceptJSONHeader() {
-    Map<String, String> headers = new HashMap();
-    headers['Content-Type'] = "application/json";
-//    headers['Connection'] = "Upgrade";
-//    headers['Upgrade'] = "WebSocket";
-    return headers;
   }
 
   bool httpResponseIsCreated(Response httpResponse) {
