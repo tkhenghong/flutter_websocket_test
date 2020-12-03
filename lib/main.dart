@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_websocket_test/http_overrides/custom_http_overrides.dart';
 import 'package:http/http.dart';
-import 'package:http/http.dart' as http;
 import 'package:stomp_dart_client/stomp.dart';
 import 'package:stomp_dart_client/stomp_config.dart';
 import 'package:stomp_dart_client/stomp_frame.dart';
@@ -48,18 +47,22 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
   // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
-  String url = 'ws://192.168.88.156:8080/ws/websocket';
+  String url = 'ws://192.168.0.195:8080/ws/websocket';
 
   TextEditingController _controller = TextEditingController();
   WebSocketChannel webSocketChannel;
   Stream<dynamic> webSocketStream;
+  StompClient stompClient;
+
+  String stompClientDebugMessage = '';
+  String officialWebSocketDebugMessage = '';
 
   @override
   void initState() {
-    headers.putIfAbsent(
-        'Authorization',
-        () =>
-            'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkMDIyZWE4Ni00YjUyLTRhZjgtYTJlYi1jNzIwMTRjZDliYzkiLCJzdWIiOiItIiwiUF9MSUQiOiJHdHVFZkJ1NXJ4VGM0ZnhDaW9MVnhBPT15TWZFdkZnQ3dxc08wODV6TFQ2dWVRPT0iLCJQX1VJRCI6IjBSMFdnN0xlTmhIaTFjRmJ1OHY1Z3c9PUJrQUp6RzVoUUgveHRlNTNhakUwcTBrRUNOdFp2U2lxSnZSUkM4MWJ3dFk9IiwiaWF0IjoxNjA2ODkzMjE5LCJleHAiOjE2MDY5MjkyMTl9.TUxqvv_RNW0ggJvkjOmQgBtLyecL_syeZlPCuW2rz1quj7_7UexDUPijUGziXj91hMlkiiKfQvm-ovavSe3sGA');
+    // headers.putIfAbsent(
+    //     'Authorization',
+    //     () =>
+    //         'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkMDIyZWE4Ni00YjUyLTRhZjgtYTJlYi1jNzIwMTRjZDliYzkiLCJzdWIiOiItIiwiUF9MSUQiOiJHdHVFZkJ1NXJ4VGM0ZnhDaW9MVnhBPT15TWZFdkZnQ3dxc08wODV6TFQ2dWVRPT0iLCJQX1VJRCI6IjBSMFdnN0xlTmhIaTFjRmJ1OHY1Z3c9PUJrQUp6RzVoUUgveHRlNTNhakUwcTBrRUNOdFp2U2lxSnZSUkM4MWJ3dFk9IiwiaWF0IjoxNjA2ODkzMjE5LCJleHAiOjE2MDY5MjkyMTl9.TUxqvv_RNW0ggJvkjOmQgBtLyecL_syeZlPCuW2rz1quj7_7UexDUPijUGziXj91hMlkiiKfQvm-ovavSe3sGA');
     webSocketChannel = IOWebSocketChannel.connect(url, headers: headers);
     super.initState();
   }
@@ -67,7 +70,7 @@ class _MyHomePageState extends State<MyHomePage> {
   testStompClientPlugin() async {
     print("testStompClientPlugin()");
     try {
-      StompClient stompClient = StompClient(
+      stompClient = StompClient(
           config: StompConfig(
               useSockJS: true,
               reconnectDelay: 3000,
@@ -87,6 +90,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 print('main.dart error: $error');
               },
               onDebugMessage: (String debugMessage) {
+                setState(() {
+                  stompClientDebugMessage = debugMessage;
+                });
                 print('main.dart onDebugMessage:');
                 print('main.dart debugMessage: $debugMessage');
               },
@@ -104,68 +110,98 @@ class _MyHomePageState extends State<MyHomePage> {
     webSocketStream = webSocketChannel.stream.asBroadcastStream();
     webSocketStream.listen((onData) {
       print("main.dart onData: $onData");
+      setState(() {
+        officialWebSocketDebugMessage = onData;
+      });
     }, onError: (onError) {
       print("main.dart onError: $onError");
+      setState(() {
+        officialWebSocketDebugMessage = onError;
+      });
     }, onDone: () {
       print("main.dart onDone.");
+      setState(() {
+        officialWebSocketDebugMessage = 'onDone.';
+      });
     }, cancelOnError: false);
   }
 
   void _sendMessage() async {
     print('_sendMessage()');
     if (_controller.text != null && _controller.text != '') {
-      String wholeURL = "http://192.168.0.139:8080" + "/testingWEbsocket";
-      Response httpResponse = await http.post(wholeURL, body: _controller.text, headers: headers);
-
-      if (httpResponseIsCreated(httpResponse)) {
-        print('main.dart httpResponse.body: ${httpResponse.body}');
-      }
+      print('main.dart _controller.text: ${_controller.text}');
+      webSocketChannel.sink.add(_controller.text);
+      // String wholeURL = "http://192.168.0.139:8080" + "/testingWEbsocket";
+      // Response httpResponse = await http.post(wholeURL, body: _controller.text, headers: headers);
+      //
+      // if (httpResponseIsCreated(httpResponse)) {
+      //   print('main.dart httpResponse.body: ${httpResponse.body}');
+      // }
     }
+  }
+
+  closeWebSockets() {
+    webSocketChannel.sink.close();
+    stompClient.deactivate();
+  }
+
+  connectWebSockets() {
+    testStompClientPlugin();
+    testOfficialWebSocket();
   }
 
   @override
   Widget build(BuildContext context) {
-    testStompClientPlugin();
-    testOfficialWebSocket();
-
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Form(
-                child: TextFormField(
-                  controller: _controller,
-                  decoration: InputDecoration(labelText: 'Send a message'),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('StompClient debug messages: $stompClientDebugMessage'),
+                Text('Official WebSocket debug messages: $officialWebSocketDebugMessage'),
+                Form(
+                  child: TextFormField(
+                    controller: _controller,
+                    decoration: InputDecoration(labelText: 'Send a message'),
+                  ),
                 ),
-              ),
-              StreamBuilder(
-                stream: webSocketStream,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    print("if(snapshot.hasData)");
-                    print("snapshot.data: " + snapshot.data.toString());
-                  } else {
-                    print("if(!snapshot.hasData)");
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24.0),
-                    child: Text(snapshot.hasData ? '${snapshot.data}' : ''),
-                  );
-                },
-              ),
-              RaisedButton(
-                onPressed: () {
-                  print('Pressed Nothing.');
-                },
-                child: Text("Run HTTP Insepctor"),
-              )
-            ],
+                StreamBuilder(
+                  stream: webSocketStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      print("if(snapshot.hasData)");
+                      print("snapshot.data: " + snapshot.data.toString());
+                    } else {
+                      print("if(!snapshot.hasData)");
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24.0),
+                      child: Text(snapshot.hasData ? '${snapshot.data}' : ''),
+                    );
+                  },
+                ),
+                RaisedButton(
+                  child: Text('Connect WebSockets'),
+                  onPressed: connectWebSockets,
+                ),
+                RaisedButton(
+                  child: Text('Close WebSockets'),
+                  onPressed: closeWebSockets,
+                ),
+                RaisedButton(
+                  onPressed: () {
+                    print('Pressed Nothing.');
+                  },
+                  child: Text("Run HTTP Insepctor"),
+                )
+              ],
+            ),
           ),
         ),
         floatingActionButton: FloatingActionButton(
@@ -180,6 +216,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void dispose() {
     webSocketChannel.sink.close();
+    stompClient.deactivate();
     super.dispose();
   }
 
