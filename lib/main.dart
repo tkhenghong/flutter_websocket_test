@@ -44,8 +44,8 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   bool connected = false;
-  bool enableStompClient = false;
-  bool enableOfficialWebSocket = false;
+  bool enableStompClient = true;
+  bool enableOfficialWebSocket = true;
   Map<String, String> headers = new HashMap();
 
   // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
@@ -212,9 +212,16 @@ class _MyHomePageState extends State<MyHomePage> {
                     if (snapshot.hasData) {
                       print("snapshot.data: " + snapshot.data.toString());
                     }
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24.0),
-                      child: Text(snapshot.hasData ? '${snapshot.data}' : 'No data.'),
+                    return Column(
+                      children: [
+                        SizedBox(height: 50,),
+                        Text('Response from WebSocket:'),
+                        SizedBox(height: 50,),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24.0),
+                          child: Text(snapshot.hasData ? '${snapshot.data}' : 'No data.'),
+                        )
+                      ],
                     );
                   },
                 ),
@@ -225,12 +232,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 RaisedButton(
                   child: Text('Close WebSockets'),
                   onPressed: closeWebSockets,
-                ),
-                RaisedButton(
-                  onPressed: () {
-                    print('Pressed Nothing.');
-                  },
-                  child: Text("Run HTTP Insepctor"),
                 )
               ],
             ),
