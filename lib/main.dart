@@ -44,11 +44,15 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   bool connected = false;
+  bool enableStompClient = false;
+  bool enableOfficialWebSocket = false;
   Map<String, String> headers = new HashMap();
 
   // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
   // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
   String url = 'ws://192.168.0.195:8080/ws/websocket';
+  String stompTopic = '/topic/public';
+  String stompSendMessageTopic = '/app/chat.sendMessage';
 
   TextEditingController _controller = TextEditingController();
   WebSocketChannel webSocketChannel;
@@ -64,7 +68,6 @@ class _MyHomePageState extends State<MyHomePage> {
     //     'Authorization',
     //     () =>
     //         'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkMDIyZWE4Ni00YjUyLTRhZjgtYTJlYi1jNzIwMTRjZDliYzkiLCJzdWIiOiItIiwiUF9MSUQiOiJHdHVFZkJ1NXJ4VGM0ZnhDaW9MVnhBPT15TWZFdkZnQ3dxc08wODV6TFQ2dWVRPT0iLCJQX1VJRCI6IjBSMFdnN0xlTmhIaTFjRmJ1OHY1Z3c9PUJrQUp6RzVoUUgveHRlNTNhakUwcTBrRUNOdFp2U2lxSnZSUkM4MWJ3dFk9IiwiaWF0IjoxNjA2ODkzMjE5LCJleHAiOjE2MDY5MjkyMTl9.TUxqvv_RNW0ggJvkjOmQgBtLyecL_syeZlPCuW2rz1quj7_7UexDUPijUGziXj91hMlkiiKfQvm-ovavSe3sGA');
-    webSocketChannel = IOWebSocketChannel.connect(url, headers: headers);
     super.initState();
   }
 
@@ -73,13 +76,14 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       stompClient = StompClient(
           config: StompConfig(
-              useSockJS: true,
+              useSockJS: false,
               reconnectDelay: 3000,
               connectionTimeout: Duration(seconds: 5),
               url: url,
               onConnect: (StompClient client, StompFrame frame) {
                 print('main.dart onConnect()');
                 // onConnect(userId, client, frame);
+                subscribeToSTOMPSTopic(client, frame);
               },
               onWebSocketError: (dynamic error) {
                 print('main.dart onWebSocketError:');
@@ -106,8 +110,20 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  subscribeToSTOMPSTopic(StompClient client, StompFrame frame) {
+    print('main.dart subscribeToSTOMPSTopic()');
+    client.subscribe(
+        destination: stompTopic,
+        callback: (StompFrame stompFrame2) {
+          print('main.dart stompFrame2.body: ${stompFrame2.body}');
+          print('main.dart stompFrame2.command: ${stompFrame2.command}');
+          print('main.dart stompFrame2.headers.length: ${stompFrame2.headers.length}');
+        });
+  }
+
   testOfficialWebSocket() async {
-    print('');
+    print('main.dart testOfficialWebSocket()');
+    webSocketChannel = IOWebSocketChannel.connect(url, headers: headers);
     webSocketStream = webSocketChannel.stream.asBroadcastStream();
     webSocketStream.listen((onData) {
       print("main.dart onData: $onData");
@@ -130,29 +146,37 @@ class _MyHomePageState extends State<MyHomePage> {
   void _sendMessage() async {
     print('_sendMessage()');
     if (_controller.text != null && _controller.text != '') {
+      if (enableStompClient) {
+        stompClient.send(destination: stompSendMessageTopic, body: _controller.text);
+      }
+      if (enableOfficialWebSocket) {
+        webSocketChannel.sink.add(_controller.text);
+      }
+
       print('main.dart _controller.text: ${_controller.text}');
-      webSocketChannel.sink.add(_controller.text);
-      // String wholeURL = "http://192.168.0.139:8080" + "/testingWEbsocket";
-      // Response httpResponse = await http.post(wholeURL, body: _controller.text, headers: headers);
-      //
-      // if (httpResponseIsCreated(httpResponse)) {
-      //   print('main.dart httpResponse.body: ${httpResponse.body}');
-      // }
     }
   }
 
   closeWebSockets() {
     print('main.dart closeWebSockets()');
-    connected = false; // Just on indicator
-    webSocketChannel.sink.close();
-    stompClient.deactivate();
+    connected = false; // Just an indicator.
+    if (enableStompClient) {
+      stompClient.deactivate();
+    }
+    if (enableOfficialWebSocket) {
+      webSocketChannel.sink.close();
+    }
   }
 
   connectWebSockets() {
     print('main.dart connectWebSockets()');
-    connected = true; // Just on indicator
-    testStompClientPlugin();
-    testOfficialWebSocket();
+    connected = true; // Just an indicator.
+    if (enableStompClient) {
+      testStompClientPlugin();
+    }
+    if (enableOfficialWebSocket) {
+      testOfficialWebSocket();
+    }
   }
 
   @override
@@ -186,10 +210,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   stream: webSocketStream,
                   builder: (context, snapshot) {
                     if (snapshot.hasData) {
-                      print("if(snapshot.hasData)");
                       print("snapshot.data: " + snapshot.data.toString());
-                    } else {
-                      print("if(!snapshot.hasData)");
                     }
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24.0),
@@ -226,8 +247,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void dispose() {
-    webSocketChannel.sink.close();
-    stompClient.deactivate();
+    closeWebSockets();
     super.dispose();
   }
 
