@@ -43,6 +43,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  bool connected = false;
   Map<String, String> headers = new HashMap();
 
   // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
@@ -141,11 +142,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   closeWebSockets() {
+    print('main.dart closeWebSockets()');
+    connected = false; // Just on indicator
     webSocketChannel.sink.close();
     stompClient.deactivate();
   }
 
   connectWebSockets() {
+    print('main.dart connectWebSockets()');
+    connected = true; // Just on indicator
     testStompClientPlugin();
     testOfficialWebSocket();
   }
@@ -164,7 +169,13 @@ class _MyHomePageState extends State<MyHomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text('StompClient debug messages: $stompClientDebugMessage'),
+                SizedBox(
+                  height: 50,
+                ),
                 Text('Official WebSocket debug messages: $officialWebSocketDebugMessage'),
+                SizedBox(
+                  height: 50,
+                ),
                 Form(
                   child: TextFormField(
                     controller: _controller,
@@ -182,7 +193,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     }
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24.0),
-                      child: Text(snapshot.hasData ? '${snapshot.data}' : ''),
+                      child: Text(snapshot.hasData ? '${snapshot.data}' : 'No data.'),
                     );
                   },
                 ),
