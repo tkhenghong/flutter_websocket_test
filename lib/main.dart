@@ -51,6 +51,9 @@ class _MyHomePageState extends State<MyHomePage> {
   // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
   // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
   String url = 'ws://192.168.0.195:8080/ws/websocket';
+
+  // String url = 'ws://echo.websocket.org';
+
   String stompTopic = '/topic/public';
   String stompSendMessageTopic = '/app/chat.sendMessage';
 
@@ -132,8 +135,10 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }, onError: (onError) {
       print("main.dart onError: $onError");
+      print("main.dart onError.message: ${onError.message}");
+      // print("main.dart onError.inner: ${onError.inner}");
       setState(() {
-        officialWebSocketDebugMessage = onError;
+        officialWebSocketDebugMessage = onError.message;
       });
     }, onDone: () {
       print("main.dart onDone.");
@@ -164,7 +169,7 @@ class _MyHomePageState extends State<MyHomePage> {
       stompClient.deactivate();
     }
     if (enableOfficialWebSocket) {
-      webSocketChannel.sink.close();
+      webSocketChannel.sink.close(WebSocketStatus.goingAway);
     }
   }
 
@@ -181,8 +186,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).requestFocus(FocusNode()),
+      child: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
         ),
@@ -204,26 +210,36 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: TextFormField(
                     controller: _controller,
                     decoration: InputDecoration(labelText: 'Send a message'),
+                    onFieldSubmitted: (String message) {
+                      _sendMessage();
+                    },
                   ),
                 ),
-                StreamBuilder(
-                  stream: webSocketStream,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      print("snapshot.data: " + snapshot.data.toString());
-                    }
-                    return Column(
-                      children: [
-                        SizedBox(height: 50,),
-                        Text('Response from WebSocket:'),
-                        SizedBox(height: 50,),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24.0),
-                          child: Text(snapshot.hasData ? '${snapshot.data}' : 'No data.'),
-                        )
-                      ],
-                    );
-                  },
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Text('Response from STOMP Client WebSocket:'),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Text(''),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Text('Response from Official WebSocket:'),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Text(officialWebSocketDebugMessage.isNotEmpty ? officialWebSocketDebugMessage : 'No data.'),
+                  ],
                 ),
                 RaisedButton(
                   child: Text('Connect WebSockets'),
