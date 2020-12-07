@@ -45,16 +45,20 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   bool connected = false;
   bool enableStompClient = true;
-  bool enableOfficialWebSocket = true;
+  bool enableOfficialWebSocket = false;
   Map<String, String> headers = new HashMap();
 
   // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
   // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
-  String url = 'ws://192.168.0.195:8080/ws/websocket';
+  // String url = 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket';
+  String url = 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket';
+  String tokenValue =
+      'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJlNjJiODg0OS03YjM4LTQzYTctODExOS1hYzU4MmE1ZWJhMjYiLCJzdWIiOiItIiwiUF9MSUQiOiJhTHB3d0tRK0ZBRlM5a055VEt4bDl3PT1CWkVSdmV4bU01OHZFMTVxUXllcU82dHRORjgyL3Y1MWZCNEtmWm5LMUpRPSIsIlBfVUlEIjoiVjhDU0g0TEpPNUVzNVNrSW1RcTVwdz09TnVjZW9HVnBYcFZNVlFFcUxyVFQybnUxYTliZC9HWEFpNDZIcnZEKzhmOD0iLCJpYXQiOjE2MDcwODIzNzMsImV4cCI6MTYwNzExODM3M30.WrazaCBDh04mYLzhFON1jHOE7GK7l2gSK9S30h4R7AB21lXlbcvKOlM33YsxqXamZde5KbymxdTrqmWAoT9pmA';
 
   // String url = 'ws://echo.websocket.org';
 
-  String stompTopic = '/topic/public';
+  // /user/${event.userId}/notifications
+  String stompTopic = '/secured/user/5fb7a5826279716b34d1153d/notifications';
   String stompSendMessageTopic = '/app/chat.sendMessage';
 
   TextEditingController _controller = TextEditingController();
@@ -67,45 +71,49 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    // headers.putIfAbsent(
-    //     'Authorization',
-    //     () =>
-    //         'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJkMDIyZWE4Ni00YjUyLTRhZjgtYTJlYi1jNzIwMTRjZDliYzkiLCJzdWIiOiItIiwiUF9MSUQiOiJHdHVFZkJ1NXJ4VGM0ZnhDaW9MVnhBPT15TWZFdkZnQ3dxc08wODV6TFQ2dWVRPT0iLCJQX1VJRCI6IjBSMFdnN0xlTmhIaTFjRmJ1OHY1Z3c9PUJrQUp6RzVoUUgveHRlNTNhakUwcTBrRUNOdFp2U2lxSnZSUkM4MWJ3dFk9IiwiaWF0IjoxNjA2ODkzMjE5LCJleHAiOjE2MDY5MjkyMTl9.TUxqvv_RNW0ggJvkjOmQgBtLyecL_syeZlPCuW2rz1quj7_7UexDUPijUGziXj91hMlkiiKfQvm-ovavSe3sGA');
+    headers.putIfAbsent('Authorization', () => tokenValue);
     super.initState();
   }
 
   testStompClientPlugin() async {
     print("testStompClientPlugin()");
     try {
+      print('headers.length: ${headers.length}');
+      headers.forEach((key, value) {
+        print('key: $key');
+        print('value: $value');
+      });
       stompClient = StompClient(
           config: StompConfig(
-              useSockJS: false,
-              reconnectDelay: 3000,
-              connectionTimeout: Duration(seconds: 5),
-              url: url,
-              onConnect: (StompClient client, StompFrame frame) {
-                print('main.dart onConnect()');
-                // onConnect(userId, client, frame);
-                subscribeToSTOMPSTopic(client, frame);
-              },
-              onWebSocketError: (dynamic error) {
-                print('main.dart onWebSocketError:');
-                print('main.dart error: $error');
-                print(error.toString());
-              },
-              onStompError: (dynamic error) {
-                print('main.dart onStompError:');
-                print('main.dart error: $error');
-              },
-              onDebugMessage: (String debugMessage) {
-                setState(() {
-                  stompClientDebugMessage = debugMessage;
-                });
-                print('main.dart onDebugMessage:');
-                print('main.dart debugMessage: $debugMessage');
-              },
-              stompConnectHeaders: headers,
-              webSocketConnectHeaders: headers));
+        // useSockJS: false,
+        reconnectDelay: 3000,
+        heartbeatIncoming: 10000,
+        heartbeatOutgoing: 10000,
+        connectionTimeout: Duration(seconds: 5),
+        url: url,
+        onConnect: (StompClient client, StompFrame frame) {
+          print('main.dart onConnect()');
+          subscribeToSTOMPSTopic(client, frame, stompTopic: stompTopic);
+        },
+        onWebSocketError: (dynamic error) {
+          print('main.dart onWebSocketError:');
+          print('main.dart error: $error');
+          print(error.toString());
+        },
+        onStompError: (dynamic error) {
+          print('main.dart onStompError:');
+          print('main.dart error: $error');
+        },
+        onDebugMessage: (String debugMessage) {
+          setState(() {
+            stompClientDebugMessage = debugMessage;
+          });
+          print('main.dart onDebugMessage:');
+          print('main.dart debugMessage: $debugMessage');
+        },
+        stompConnectHeaders: headers,
+        webSocketConnectHeaders: headers,
+      ));
       stompClient.activate();
       print('main.dart CHECKPOINT 1');
     } catch (e) {
@@ -113,14 +121,15 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  subscribeToSTOMPSTopic(StompClient client, StompFrame frame) {
+  subscribeToSTOMPSTopic(StompClient client, StompFrame frame, {String stompTopic}) {
     print('main.dart subscribeToSTOMPSTopic()');
     client.subscribe(
         destination: stompTopic,
-        callback: (StompFrame stompFrame2) {
-          print('main.dart stompFrame2.body: ${stompFrame2.body}');
-          print('main.dart stompFrame2.command: ${stompFrame2.command}');
-          print('main.dart stompFrame2.headers.length: ${stompFrame2.headers.length}');
+        callback: (stompFrame2) {
+          print('main.dart stompFrame2: ${stompFrame2}');
+          // print('main.dart stompFrame2.body: ${stompFrame2.body}');
+          // print('main.dart stompFrame2.command: ${stompFrame2.command}');
+          // print('main.dart stompFrame2.headers.length: ${stompFrame2.headers.length}');
         });
   }
 
