@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_websocket_test/http_overrides/custom_http_overrides.dart';
 import 'package:http/http.dart';
@@ -10,10 +11,7 @@ import 'package:stomp_dart_client/stomp.dart';
 import 'package:stomp_dart_client/stomp_config.dart';
 import 'package:stomp_dart_client/stomp_frame.dart';
 import 'package:web_socket_channel/io.dart';
-import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:http/http.dart' as http;
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,19 +21,13 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-
   @override
   Widget build(BuildContext context) {
     final title = 'WebSocket Demo';
-    Map<String, String> headers = new HashMap();
-    headers.putIfAbsent('Authorization', () => 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJmNGE2MTZmMi0xYjdlLTQxYTUtOGUwMy05NjRkMWIzNzAwYzAiLCJzdWIiOiItIiwiUF9MSUQiOiJjTGZHOC9XS0EzYnpwSDlJMEJnd3NRPT0vYmdscGU1NlpGbUtyVVd4c3R6VHRRPT0iLCJQX1VJRCI6Im4yRzNiV2ZsZ0pSQVJqN0dDRDJUeXc9PXluRUpYUkZZT3dIbkZ4a0dXZFQwUC93Z3cwL3JBT0JhRDBJaVRaQ2h6Ym89IiwiaWF0IjoxNjA2ODk2MTA5LCJleHAiOjE2MDY5MzIxMDl9');
     return MaterialApp(
       title: title,
       home: MyHomePage(
         title: title,
-        // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
-        // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
-        channel: IOWebSocketChannel.connect("ws://192.168.88.156:8080/ws/websocket", headers: headers),
       ),
     );
   }
@@ -43,65 +35,85 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   final String title;
-  final WebSocketChannel channel;
 
-  MyHomePage({Key key, @required this.title, @required this.channel}) : super(key: key);
+  MyHomePage({Key key, @required this.title}) : super(key: key);
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  bool connected = false;
+  bool enableStompClient = true;
+  bool enableOfficialWebSocket = false;
+  Map<String, String> headers = new HashMap();
+
+  // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
+  // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
+  // String url = 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket';
+  String url = 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket';
+  String tokenValue =
+      'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJlNjJiODg0OS03YjM4LTQzYTctODExOS1hYzU4MmE1ZWJhMjYiLCJzdWIiOiItIiwiUF9MSUQiOiJhTHB3d0tRK0ZBRlM5a055VEt4bDl3PT1CWkVSdmV4bU01OHZFMTVxUXllcU82dHRORjgyL3Y1MWZCNEtmWm5LMUpRPSIsIlBfVUlEIjoiVjhDU0g0TEpPNUVzNVNrSW1RcTVwdz09TnVjZW9HVnBYcFZNVlFFcUxyVFQybnUxYTliZC9HWEFpNDZIcnZEKzhmOD0iLCJpYXQiOjE2MDcwODIzNzMsImV4cCI6MTYwNzExODM3M30.WrazaCBDh04mYLzhFON1jHOE7GK7l2gSK9S30h4R7AB21lXlbcvKOlM33YsxqXamZde5KbymxdTrqmWAoT9pmA';
+
+  // String url = 'ws://echo.websocket.org';
+
+  // /user/${event.userId}/notifications
+  String stompTopic = '/secured/user/5fb7a5826279716b34d1153d/notifications';
+  String stompSendMessageTopic = '/app/chat.sendMessage';
+
   TextEditingController _controller = TextEditingController();
-//  SocketFlutterPlugin myIO;
+  WebSocketChannel webSocketChannel;
+  Stream<dynamic> webSocketStream;
+  StompClient stompClient;
+
+  String stompClientDebugMessage = '';
+  String officialWebSocketDebugMessage = '';
 
   @override
   void initState() {
+    headers.putIfAbsent('Authorization', () => tokenValue);
     super.initState();
   }
 
-  testWebsocketPlugin() async {
-    print("testWebsocketPlugin()");
-    Map<String, String> headers = new HashMap();
-    headers.putIfAbsent('Authorization', () => 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJmNGE2MTZmMi0xYjdlLTQxYTUtOGUwMy05NjRkMWIzNzAwYzAiLCJzdWIiOiItIiwiUF9MSUQiOiJjTGZHOC9XS0EzYnpwSDlJMEJnd3NRPT0vYmdscGU1NlpGbUtyVVd4c3R6VHRRPT0iLCJQX1VJRCI6Im4yRzNiV2ZsZ0pSQVJqN0dDRDJUeXc9PXluRUpYUkZZT3dIbkZ4a0dXZFQwUC93Z3cwL3JBT0JhRDBJaVRaQ2h6Ym89IiwiaWF0IjoxNjA2ODk2MTA5LCJleHAiOjE2MDY5MzIxMDl9');
+  testStompClientPlugin() async {
+    print("testStompClientPlugin()");
     try {
-      // Correct URL (Connect to self made websocket-demo project: 'ws://192.168.88.156:8080/ws/websocket')
-      // Correct URL: (Connect to self made juno-titan/titan-rest project: 'wss://vmerchant.neurogine.com/rest/secured/socket/websocket')
-      String webSocketUrl = 'ws://192.168.88.156:8080/ws/websocket';
-
-      StompClient stompClient = StompClient(
+      print('headers.length: ${headers.length}');
+      headers.forEach((key, value) {
+        print('key: $key');
+        print('value: $value');
+      });
+      stompClient = StompClient(
           config: StompConfig(
-              useSockJS: true,
-              reconnectDelay: 3000,
-              connectionTimeout: Duration(seconds: 60),
-              url: webSocketUrl,
-              onConnect: (StompClient client, StompFrame frame) {
-                print('main.dart onConnect()');
-                client.subscribe(destination: '/topic/public', callback: (message) {
-                  print('main.dart client.subscribe callback is working.');
-                  print('main.dart message: $message');
-                });
-                Timer.periodic(Duration(seconds: 2), (_) {
-                  print('main.dart Send message from here!');
-                  client.send(destination: '/app/chat.sendMessage', body: 'Test message sent!');
-                });
-
-              },
-              onWebSocketError: (dynamic error) {
-                print('main.dart onWebSocketError:');
-                print('main.dart error: $error');
-                print(error.toString());
-              },
-              onStompError: (dynamic error) {
-                print('main.dart onStompError:');
-                print('main.dart error: $error');
-              },
-              onDebugMessage: (String debugMessage) {
-                print('main.dart onDebugMessage:');
-                print('main.dart debugMessage: $debugMessage');
-              },
-              // stompConnectHeaders: headers,
-              webSocketConnectHeaders: headers));
+        // useSockJS: false,
+        reconnectDelay: 3000,
+        heartbeatIncoming: 10000,
+        heartbeatOutgoing: 10000,
+        connectionTimeout: Duration(seconds: 5),
+        url: url,
+        onConnect: (StompClient client, StompFrame frame) {
+          print('main.dart onConnect()');
+          subscribeToSTOMPSTopic(client, frame, stompTopic: stompTopic);
+        },
+        onWebSocketError: (dynamic error) {
+          print('main.dart onWebSocketError:');
+          print('main.dart error: $error');
+          print(error.toString());
+        },
+        onStompError: (dynamic error) {
+          print('main.dart onStompError:');
+          print('main.dart error: $error');
+        },
+        onDebugMessage: (String debugMessage) {
+          setState(() {
+            stompClientDebugMessage = debugMessage;
+          });
+          print('main.dart onDebugMessage:');
+          print('main.dart debugMessage: $debugMessage');
+        },
+        stompConnectHeaders: headers,
+        webSocketConnectHeaders: headers,
+      ));
       stompClient.activate();
       print('main.dart CHECKPOINT 1');
     } catch (e) {
@@ -109,58 +121,145 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  subscribeToSTOMPSTopic(StompClient client, StompFrame frame, {String stompTopic}) {
+    print('main.dart subscribeToSTOMPSTopic()');
+    client.subscribe(
+        destination: stompTopic,
+        callback: (stompFrame2) {
+          print('main.dart stompFrame2: ${stompFrame2}');
+          // print('main.dart stompFrame2.body: ${stompFrame2.body}');
+          // print('main.dart stompFrame2.command: ${stompFrame2.command}');
+          // print('main.dart stompFrame2.headers.length: ${stompFrame2.headers.length}');
+        });
+  }
+
+  testOfficialWebSocket() async {
+    print('main.dart testOfficialWebSocket()');
+    webSocketChannel = IOWebSocketChannel.connect(url, headers: headers);
+    webSocketStream = webSocketChannel.stream.asBroadcastStream();
+    webSocketStream.listen((onData) {
+      print("main.dart onData: $onData");
+      setState(() {
+        officialWebSocketDebugMessage = onData;
+      });
+    }, onError: (onError) {
+      print("main.dart onError: $onError");
+      print("main.dart onError.message: ${onError.message}");
+      // print("main.dart onError.inner: ${onError.inner}");
+      setState(() {
+        officialWebSocketDebugMessage = onError.message;
+      });
+    }, onDone: () {
+      print("main.dart onDone.");
+      setState(() {
+        officialWebSocketDebugMessage = 'onDone.';
+      });
+    }, cancelOnError: false);
+  }
+
+  void _sendMessage() async {
+    print('_sendMessage()');
+    if (_controller.text != null && _controller.text != '') {
+      if (enableStompClient) {
+        stompClient.send(destination: stompSendMessageTopic, body: _controller.text);
+      }
+      if (enableOfficialWebSocket) {
+        webSocketChannel.sink.add(_controller.text);
+      }
+
+      print('main.dart _controller.text: ${_controller.text}');
+    }
+  }
+
+  closeWebSockets() {
+    print('main.dart closeWebSockets()');
+    connected = false; // Just an indicator.
+    if (enableStompClient) {
+      stompClient.deactivate();
+    }
+    if (enableOfficialWebSocket) {
+      webSocketChannel.sink.close(WebSocketStatus.goingAway);
+    }
+  }
+
+  connectWebSockets() {
+    print('main.dart connectWebSockets()');
+    connected = true; // Just an indicator.
+    if (enableStompClient) {
+      testStompClientPlugin();
+    }
+    if (enableOfficialWebSocket) {
+      testOfficialWebSocket();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    testWebsocketPlugin();
-    Stream<dynamic> stream = widget.channel.stream.asBroadcastStream();
-    stream.listen((onData) {
-      print("onData listener is working.");
-      print("onData: " + onData.toString());
-    }, onError: (onError) {
-      print("onError listener is working.");
-      print("onError: " + onError.toString());
-    }, onDone: () {
-      print("onDone listener is working.");
-    }, cancelOnError: false);
-
-    return MaterialApp(
-      home: Scaffold(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).requestFocus(FocusNode()),
+      child: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Form(
-                child: TextFormField(
-                  controller: _controller,
-                  decoration: InputDecoration(labelText: 'Send a message'),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('StompClient debug messages: $stompClientDebugMessage'),
+                SizedBox(
+                  height: 50,
                 ),
-              ),
-              StreamBuilder(
-                stream: stream,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    print("if(snapshot.hasData)");
-                    print("snapshot.data: " + snapshot.data.toString());
-                  } else {
-                    print("if(!snapshot.hasData)");
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24.0),
-                    child: Text(snapshot.hasData ? '${snapshot.data}' : ''),
-                  );
-                },
-              ),
-              RaisedButton(
-                onPressed: () {
-                  print('Pressed Nothing.');
-                },
-                child: Text("Run HTTP Insepctor"),
-              )
-            ],
+                Text('Official WebSocket debug messages: $officialWebSocketDebugMessage'),
+                SizedBox(
+                  height: 50,
+                ),
+                Form(
+                  child: TextFormField(
+                    controller: _controller,
+                    decoration: InputDecoration(labelText: 'Send a message'),
+                    onFieldSubmitted: (String message) {
+                      _sendMessage();
+                    },
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Text('Response from STOMP Client WebSocket:'),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Text(''),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Text('Response from Official WebSocket:'),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Text(officialWebSocketDebugMessage.isNotEmpty ? officialWebSocketDebugMessage : 'No data.'),
+                  ],
+                ),
+                RaisedButton(
+                  child: Text('Connect WebSockets'),
+                  onPressed: connectWebSockets,
+                ),
+                RaisedButton(
+                  child: Text('Close WebSockets'),
+                  onPressed: closeWebSockets,
+                )
+              ],
+            ),
           ),
         ),
         floatingActionButton: FloatingActionButton(
@@ -172,40 +271,10 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _sendMessage() {
-    print("Send Message");
-    if (_controller.text != null && _controller.text != '') {
-      sendMessageToREST(_controller.text);
-      // widget.channel.sink.add(_controller.text);
-      // this.client.sendString("/app/hello", _controller.text);
-    }
-  }
-
   @override
   void dispose() {
-    widget.channel.sink.close();
+    closeWebSockets();
     super.dispose();
-  }
-
-  sendMessageToREST(String message) async {
-    String wholeURL = "http://192.168.0.139:8080" + "/testingWEbsocket";
-    var httpResponse = await http.post(wholeURL, body: message, headers: createAcceptJSONHeader());
-
-    print("HTTP RESPONSE");
-    if (httpResponseIsCreated(httpResponse)) {
-//      String locationString = httpResponse.headers['location'];
-
-      print("Run here?");
-    }
-    return null;
-  }
-
-  Map<String, String> createAcceptJSONHeader() {
-    Map<String, String> headers = new HashMap();
-    headers['Content-Type'] = "application/json";
-//    headers['Connection'] = "Upgrade";
-//    headers['Upgrade'] = "WebSocket";
-    return headers;
   }
 
   bool httpResponseIsCreated(Response httpResponse) {
